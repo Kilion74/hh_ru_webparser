@@ -16,38 +16,40 @@
     <button type="submit">Искать</button>
 </form>
 {% if vacancies %}
-    <h2>Найденные вакансии: {{ all_vacancies }}</h2>
-    {% if download %}
-        <a href="/download?keyword={{ keyword }}" class="form-control">Скачать вакансии в JSON</a>
-    {% endif %}
-    <table>
-        <tr>
-            <th>Название</th>
-            <th>Зарплата от</th>
-            <th>Зарплата до</th>
-            <th>Валюта</th>
-            <th>Город</th>
-            <th>Описание</th>
-            <th>Ссылка</th>
-        </tr>
-        {% for vacancy in vacancies %}
-            <tr>
-                <td>{{ vacancy.name }}</td>
-                <td>{{ vacancy.salary_from }}</td>
-                <td>{{ vacancy.salary_to }}</td>
-                <td>{{ vacancy.currency }}</td>
-                <td>{{ vacancy.city }}</td>
-                <td>{{ vacancy.discription }}</td>
-                <td><a href="{{ vacancy.link }}" class="vacancy-link">{{ vacancy.link }}</a></td>
-            </tr>
-        {% endfor %}
-    </table>
-{% elif message %}
-    <p>{{ message }}</p>
-{% endif %}
-{% if download %}
-    <a href="/download" class="form-control">Скачать вакансии в CSV</a>
-{% endif %}
+<h2>Найденные вакансии: {{ all_vacancies }}</h2>
+<form method="post" action="/download">
+    <input type="hidden" name="work_name" value="{{ keyword }}">
+    <input type="submit" value="Скачать в Excel">
+</form>
+<table>
+    <tr>
+        <th>Название</th>
+        <th>Зарплата от</th>
+        <th>Зарплата до</th>
+        <th>Валюта</th>
+        <th>Город</th>
+        <th>Описание</th>
+        <th>Ссылка</th>
+    </tr>
+    {% for vacancy in vacancies %}
+    <tr>
+        <td>{{ vacancy.name }}</td>
+        <td>{{ vacancy.salary_from }}</td>
+        <td>{{ vacancy.salary_to }}</td>
+        <td>{{ vacancy.currency }}</td>
+        <td>{{ vacancy.city }}</td>
+        <td>{{ vacancy.discription }}</td>
+        <td><a href="{{ vacancy.link }}" class="vacancy-link">{{ vacancy.link }}</a></td>
+    </tr>
+    {% endfor %}
 </table>
+{% elif message %}
+<p>{{ message }}</p>
+{% endif %}
+<form method="post" action="/download">
+    <input type="hidden" name="work_name" value="{{ keyword }}">
+    <input type="submit" value="Скачать в Excel">
+</form>
+<!--{#</table>#}-->
 </body>
 </html>

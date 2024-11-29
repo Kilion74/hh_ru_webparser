@@ -1,12 +1,13 @@
-from flask import Flask, request, render_template, send_file
+from flask import Flask, request, render_template, send_file, redirect, url_for
 import requests
-import csv
-# import os
+# import csv
+import pandas as pd
+from io import BytesIO
 import logging
 import json
 # import pandas as pd
 # from io import BytesIO
-# -*- coding: utf-8 -*-
+from functools import lru_cache
 import sys
 
 sys.stdout.reconfigure(encoding='utf-8')
@@ -15,7 +16,7 @@ logging.basicConfig(level=logging.DEBUG)
 app = Flask(__name__)
 
 
-# Функция для поиска вакансий
+@lru_cache(maxsize=1)     # хранить в кеше только результат крайнего запроса
 def search_vacancies(keyword):
     BASE_URL = "https://api.hh.ru/vacancies"
     vacancies_found = []  # Список для хранения найденных вакансий
@@ -67,47 +68,40 @@ def search_vacancies(keyword):
     return vacancies_found
 
 
-# # Функция для сохранения вакансий в CSV
-# def save_to_csv(vacancies, filename='vacancies.csv'):
-#     # Если имя файла не передано, создаем его на основе ключевого слова
-#     keys = vacancies[0].keys()
-#     with open(filename, 'w', newline='', encoding='utf-16') as csvfile:
-#         writer = csv.DictWriter(csvfile, fieldnames=keys)
-#         writer.writeheader()
-#         writer.writerows(vacancies)
-#     return filename  # Возвращаем имя файла
+@app.route('/download', methods=['POST'])
+def download():
+    keyword = request.form.get('work_name', '').strip()
+    if keyword == '':
+        return redirect('/')  # ничего не делать если keyword не задан
+    vacancies = search_vacancies(keyword)
 
-
-def save_to_json(vacancies):
-    # Если имя файла не передано, создаем его на основе ключевого слова
-    with open('vacancies.json', 'w', encoding='utf-8') as jsonfile:
-        json.dump(vacancies, jsonfile, ensure_ascii=False, indent=2)
-    return 'vacancies.json' # Возвращаем имя файла
-
-
-# @app.route('/download')
-# def download_file():
-#     return send_file('vacancies.csv', as_attachment=True)
-
-@app.route('/download')
-def download_file():
-    return send_file('vacancies.json', as_attachment=True)
+    df = pd.DataFrame(vacancies)
+    output = BytesIO()
+    df.to_excel(output, index=False)
+    output.seek(0)
+    return send_file(output, as_attachment=True, download_name='vacancies.xlsx')
 
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        keyword = request.form['keyword']
-        vacancies = search_vacancies(keyword)
+        keyword = request.form.get('keyword', '').strip()
+        if request.method == 'POST' and keyword:  # обновлять страницу только если задано ключевое слово
+            vacancies = search_vacancies(keyword)
         print(len(vacancies))
         all_vacancies = (len(vacancies))
         if vacancies:
-            filename = save_to_json(vacancies)
-            return render_template('index.html', vacancies=vacancies, filename=filename, download=True, all_vacancies=all_vacancies)
+            return render_template('index.html',
+                                   vacancies=vacancies,
+                                   download=True,
+                                   all_vacancies=all_vacancies,
+                                   keyword=keyword)  # сохранить keyword на html-странице
         else:
-            return render_template('index.html', all_vacancies=0)
-    return render_template('index.html')
+            return render_template('index.html',
+                                   all_vacancies=0,  # даже если по запросу ничего нет
+                                   keyword=keyword)  # сохранить keyword на html-странице
+    return render_template('index.html')  # пустой keyword приемлем для стартовой страницы без каких-либо данных
 
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5555)
+    app.run(debug=True)
